@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Extractora Android MTP</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">MTP</div>
+        <div>
+          <div class="brand-title">Extractora Android</div>
+          <div class="brand-subtitle">Extrae cualquier tipo de archivo</div>
+        </div>
+      </div>
+      <nav class="menu" id="menu"></nav>
+      <div class="sidebar-footer">
+        <div class="status">
+          <span class="dot"></span>
+          <span>Modo: Guia interactiva</span>
+        </div>
+        <button class="ghost" id="toggle-theme">Cambiar atmosfera</button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section class="hero" id="inicio">
+        <div>
+          <p class="pill">MTP / ADB / jmtpfs</p>
+          <h1>Extrae archivos de Android a tu PC</h1>
+          <p class="lead">Conecta tu celular por USB, detectalo y extrae cualquier tipo de archivo: documentos, imagenes, videos, audios o cualquier extension personalizada.</p>
+          <div class="hero-actions">
+            <button class="primary" id="detect-device">Detectar dispositivo</button>
+            <button class="secondary" id="remount-btn" disabled>Reconectar</button>
+            <button class="secondary" id="copy-all">Copiar comandos</button>
+          </div>
+          <div class="detect-status" id="detect-status">
+            Esperando conexion...
+          </div>
+        </div>
+        <div class="hero-card">
+          <h2>Checklist rapido</h2>
+          <ul id="quick-checklist"></ul>
+        </div>
+      </section>
+
+      <section class="panel" id="exploracion-panel">
+        <div class="panel-header">
+          <div>
+            <p class="section-kicker">extraccion</p>
+            <h2>Explorar y extraer archivos</h2>
+            <p class="section-desc">Cuando el dispositivo se detecta, explora su estructura y extrae los archivos que necesites.</p>
+          </div>
+          <button class="primary" id="start-exploration" disabled>Ver arbol de carpetas</button>
+        </div>
+        <div class="panel-body">
+          <div class="tree" id="device-tree">
+            <div class="tree-placeholder">
+              Árbol del celular: esperando detección.<br><br>
+              <small style="color: var(--muted);">
+                Durante la operación verás:<br>
+                🔵 Azul = Buscando<br>
+                🟢 Verde = Extrayendo<br>
+                🔴 Rojo = Eliminando
+              </small>
+            </div>
+          </div>
+          <form class="extract-form" id="extract-form">
+            <div class="field">
+              <label for="file-type">Tipo de archivo a extraer</label>
+              <select id="file-type">
+                <option value="pdf">PDF (.pdf)</option>
+                <option value="documents">Documentos (pdf, doc, xls, ppt, txt...)</option>
+                <option value="images">Imagenes (jpg, png, gif, webp...)</option>
+                <option value="videos">Videos (mp4, mkv, avi, mov...)</option>
+                <option value="audio">Audio (mp3, wav, m4a, flac...)</option>
+                <option value="all">Todos los tipos comunes</option>
+                <option value="custom">Extension personalizada...</option>
+              </select>
+            </div>
+            <div class="field" id="custom-ext-field" style="display: none;">
+              <label for="custom-ext">Extension (sin punto)</label>
+              <input id="custom-ext" type="text" placeholder="Ej: apk, zip, rar, epub" />
+              <span class="hint">Ingresa la extension sin el punto inicial.</span>
+            </div>
+            <div class="field">
+              <label for="search-mode">Modo de busqueda</label>
+              <select id="search-mode">
+                <option value="known">Ubicaciones conocidas (rapido)</option>
+                <option value="full">Todo el almacenamiento (completo)</option>
+              </select>
+              <span class="hint">Ubicaciones conocidas: Download, Documents, WhatsApp, Telegram, DCIM, etc.</span>
+            </div>
+            <div class="field">
+              <label for="destination">Carpeta destino (opcional)</label>
+              <input id="destination" type="text" placeholder="Ej: /home/usuario/Extraidos" />
+              <span class="hint">Si lo dejas vacio, se crea una carpeta automatica en ~/Extraidos_Android/</span>
+            </div>
+            <div class="field checkbox-field">
+              <label class="checkbox-label">
+                <input type="checkbox" id="delete-after" />
+                <span>Eliminar archivos del celular despues de extraer</span>
+              </label>
+              <span class="hint warn-hint">ADVERTENCIA: Esta accion es permanente y no se puede deshacer.</span>
+            </div>
+            <button class="primary" type="submit">Iniciar extraccion</button>
+
+            <div class="progress-block">
+              <div class="progress-label">Busqueda</div>
+              <div class="progress" id="search-progress">
+                <div class="progress-bar" id="search-bar"></div>
+              </div>
+              <div class="progress-meta" id="search-meta">Sin busqueda activa.</div>
+            </div>
+            <div class="progress-block">
+              <div class="progress-label">Extraccion</div>
+              <div class="progress" id="extract-progress">
+                <div class="progress-bar" id="extract-bar"></div>
+              </div>
+              <div class="progress-meta" id="extract-meta">Sin extraccion activa.</div>
+            </div>
+            <div class="progress-block">
+              <div class="progress-label">Eliminacion</div>
+              <div class="progress" id="delete-progress">
+                <div class="progress-bar delete-bar" id="delete-bar"></div>
+              </div>
+              <div class="progress-meta" id="delete-meta">No se eliminaran archivos.</div>
+            </div>
+
+            <div class="location-stats" id="location-stats"></div>
+            <div class="result" id="extract-result"></div>
+          </form>
+        </div>
+      </section>
+
+      <section class="grid" id="sections"></section>
+    </main>
+  </div>
+
+  <template id="section-template">
+    <article class="section">
+      <header>
+        <p class="section-kicker"></p>
+        <h2></h2>
+        <p class="section-desc"></p>
+      </header>
+      <div class="cards"></div>
+    </article>
+  </template>
+
+  <template id="card-template">
+    <div class="card">
+      <div class="card-head">
+        <h3></h3>
+        <button class="ghost small copy-btn">Copiar</button>
+      </div>
+      <p class="card-desc"></p>
+      <pre><code></code></pre>
+      <div class="card-notes"></div>
+    </div>
+  </template>
+
+  <template id="note-template">
+    <div class="note"></div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
