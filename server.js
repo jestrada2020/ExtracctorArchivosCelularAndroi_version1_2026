@@ -64,7 +64,7 @@ const readBody = (req) =>
     let data = "";
     req.on("data", (chunk) => {
       data += chunk;
-      if (data.length > 2_000_000) {
+      if (data.length > 50_000_000) {
         reject(new Error("Body demasiado grande"));
         req.destroy();
       }
@@ -84,7 +84,7 @@ const readBody = (req) =>
 
 const execGio = (args, timeout = 120000) =>
   new Promise((resolve, reject) => {
-    execFile("gio", args, { timeout }, (err, stdout, stderr) => {
+    execFile("gio", args, { timeout, maxBuffer: 50 * 1024 * 1024 }, (err, stdout, stderr) => {
       if (err) {
         reject(new Error(stderr || err.message));
         return;
@@ -355,7 +355,7 @@ const scanAndExtract = async (job, deviceId, type, destination, searchMode) => {
       job.currentLocation = location;
       job.searchProgress = Math.round((searchedLocations / totalLocations) * 90);
 
-      const files = await searchInFolder(job, deviceId, location, type, searchMode === "known" ? 5 : 15);
+      const files = await searchInFolder(job, deviceId, location, type, searchMode === "known" ? 8 : 20);
 
       if (files.length > 0) {
         job.locationStats[location] = files.length;
@@ -379,6 +379,9 @@ const scanAndExtract = async (job, deviceId, type, destination, searchMode) => {
     // Crear directorio destino
     fs.mkdirSync(destination, { recursive: true });
 
+    // Timeout adaptativo: más archivos → más tiempo por archivo (MTP se ralentiza)
+    const copyTimeout = allFiles.length > 500 ? 180000 : allFiles.length > 100 ? 120000 : 60000;
+
     // Copiar archivos
     for (let i = 0; i < allFiles.length; i++) {
       const file = allFiles[i];
@@ -387,7 +390,7 @@ const scanAndExtract = async (job, deviceId, type, destination, searchMode) => {
       try {
         const encoded = encodeMtpPath(file.path);
         const uri = buildMtpUri(deviceId, encoded);
-        await execGio(["copy", uri, destination], 60000);
+        await execGio(["copy", uri, destination], copyTimeout);
         job.copied += 1;
         job.extractProgress = Math.round((job.copied / allFiles.length) * 100);
       } catch (err) {
@@ -410,7 +413,7 @@ const scanAndExtract = async (job, deviceId, type, destination, searchMode) => {
         try {
           const encoded = encodeMtpPath(file.path);
           const uri = buildMtpUri(deviceId, encoded);
-          await execGio(["remove", uri], 30000);
+          await execGio(["remove", uri], allFiles.length > 500 ? 60000 : 30000);
           job.deleted += 1;
         } catch (err) {
           console.error(`Error eliminando ${file.path}: ${err.message}`);
@@ -461,7 +464,7 @@ const server = http.createServer(async (req, res) => {
     const deviceId = url.searchParams.get("deviceId");
     const base = url.searchParams.get("base") || "Almacenamiento interno compartido";
     const depth = Number(url.searchParams.get("depth") || 5);
-    const maxNodes = Number(url.searchParams.get("maxNodes") || 2000);
+    const maxNodes = Number(url.searchParams.get("maxNodes") || 5000);
 
     if (!deviceId) {
       respondJson(res, 400, { error: "deviceId requerido" });
@@ -529,7 +532,40 @@ const server = http.createServer(async (req, res) => {
       respondJson(res, 404, { error: "job no encontrado" });
       return;
     }
-    respondJson(res, 200, job);
+    // Respuesta ligera: enviar todo excepto la lista completa de archivos
+    const includeFiles = url.searchParams.get("files") === "1";
+    const offset = Number(url.searchParams.get("offset") || 0);
+    const limit = Number(url.searchParams.get("limit") || 200);
+
+    const lite = {
+      id: job.id,
+      status: job.status,
+      stage: job.stage,
+      searchProgress: job.searchProgress,
+      extractProgress: job.extractProgress,
+      deleteProgress: job.deleteProgress,
+      currentPath: job.currentPath,
+      currentLocation: job.currentLocation,
+      found: job.found,
+      copied: job.copied,
+      deleted: job.deleted,
+      total: job.total,
+      type: job.type,
+      destination: job.destination,
+      deleteAfter: job.deleteAfter,
+      currentFileIndex: job.currentFileIndex,
+      locationStats: job.locationStats,
+      error: job.error,
+      totalFiles: job.files.length
+    };
+
+    if (includeFiles) {
+      lite.files = job.files.slice(offset, offset + limit);
+      lite.filesOffset = offset;
+      lite.filesHasMore = (offset + limit) < job.files.length;
+    }
+
+    respondJson(res, 200, lite);
     return;
   }
 

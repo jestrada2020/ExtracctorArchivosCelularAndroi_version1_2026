@@ -1,3 +1,16 @@
+// Detectar si hay servidor backend disponible (local) o es solo frontend (GitHub Pages)
+let serverAvailable = false;
+const checkServer = async () => {
+  try {
+    const res = await fetch("/api/file-types", { signal: AbortSignal.timeout(3000) });
+    serverAvailable = res.ok;
+  } catch (_) {
+    serverAvailable = false;
+  }
+  return serverAvailable;
+};
+checkServer();
+
 const sections = [
   {
     id: "preparacion",
@@ -384,8 +397,8 @@ const addLogEntry = (message, type = "info") => {
   treeLog.appendChild(entry);
   treeLog.scrollTop = treeLog.scrollHeight;
 
-  // Limitar a 50 entradas
-  while (treeLog.children.length > 50) {
+  // Limitar a 200 entradas
+  while (treeLog.children.length > 200) {
     treeLog.removeChild(treeLog.firstChild);
   }
 };
@@ -441,11 +454,25 @@ const updateLocationStats = (stats) => {
   locationStats.innerHTML = html;
 };
 
-detectDevice.addEventListener("click", () => {
+detectDevice.addEventListener("click", async () => {
   detectDevice.disabled = true;
   detectStatus.textContent = "Detectando dispositivo...";
   detectStatus.classList.remove("warn", "success");
   detectStatus.classList.add("warn");
+
+  // Verificar si hay servidor backend
+  await checkServer();
+  if (!serverAvailable) {
+    detectStatus.innerHTML =
+      "Servidor local no detectado. Para usar la extraccion automatica:" +
+      "<br><br>1. Clona este repositorio en tu PC Linux" +
+      "<br>2. Ejecuta: <code>node server.js</code>" +
+      "<br>3. Abre <code>http://127.0.0.1:3000</code>" +
+      "<br><br>La guia de comandos de abajo funciona sin servidor.";
+    detectStatus.classList.add("warn");
+    detectDevice.disabled = false;
+    return;
+  }
 
   fetchJson("/api/device")
     .then((payload) => {
@@ -504,7 +531,7 @@ const loadDeviceTree = () => {
   deviceTree.innerHTML = "";
   deviceTree.textContent = "Cargando arbol del dispositivo...";
 
-  fetchJson(`/api/tree?deviceId=${encodeURIComponent(activeDeviceId)}&depth=4&maxNodes=1500`)
+  fetchJson(`/api/tree?deviceId=${encodeURIComponent(activeDeviceId)}&depth=6&maxNodes=5000`)
     .then((payload) => {
       deviceTree.innerHTML = "";
       buildTreeUI(payload.tree, deviceTree);
@@ -554,6 +581,12 @@ extractForm.addEventListener("submit", (event) => {
   event.preventDefault();
   extractResult.textContent = "";
   locationStats.innerHTML = "";
+
+  if (!serverAvailable) {
+    extractResult.textContent = "La extraccion automatica requiere el servidor local. Ejecuta 'node server.js' en tu PC.";
+    extractResult.classList.add("warn");
+    return;
+  }
 
   if (!activeDeviceId) {
     extractResult.textContent = "Primero detecta el dispositivo.";
@@ -629,9 +662,19 @@ extractForm.addEventListener("submit", (event) => {
       let lastCopied = 0;
       let lastDeleted = 0;
       let lastPath = "";
+      let cachedFiles = []; // Cache local de archivos para no pedirlos en cada poll
+
+      // Función para obtener archivos paginados del servidor bajo demanda
+      const fetchFilesBatch = async (offset, limit) => {
+        const data = await fetchJson(
+          `/api/extract/status?id=${encodeURIComponent(jobId)}&files=1&offset=${offset}&limit=${limit}`
+        );
+        return data.files || [];
+      };
 
       statusTimer = setInterval(async () => {
         try {
+          // Polling ligero: NO pide archivos, solo estado
           const job = await fetchJson(`/api/extract/status?id=${encodeURIComponent(jobId)}`);
 
           searchBar.style.width = `${job.searchProgress}%`;
@@ -667,6 +710,8 @@ extractForm.addEventListener("submit", (event) => {
               if (lastPath) markPathStatus(lastPath, "found");
               addLogEntry(`Búsqueda completada: ${job.found} archivos encontrados`, "info");
               addLogEntry(`Iniciando extracción a: ${job.destination}`, "extract");
+              // Cargar los archivos en cache cuando inicia extracción
+              cachedFiles = await fetchFilesBatch(0, job.totalFiles || job.total);
             }
 
             searchMeta.textContent = `Busqueda completada: ${job.found} archivos encontrados.`;
@@ -676,11 +721,11 @@ extractForm.addEventListener("submit", (event) => {
             // Resaltar archivo actual en verde (extrayendo)
             highlightPath(job.currentPath, "extracting");
 
-            // Marcar archivos ya copiados
+            // Marcar archivos ya copiados usando cache local
             if (job.copied > lastCopied) {
               for (let i = lastCopied; i < job.copied; i++) {
-                if (job.files && job.files[i]) {
-                  markPathStatus(job.files[i].path, "copied");
+                if (cachedFiles[i]) {
+                  markPathStatus(cachedFiles[i].path, "copied");
                 }
               }
               if (job.copied % 5 === 0 || job.copied === 1) {
@@ -694,6 +739,10 @@ extractForm.addEventListener("submit", (event) => {
             if (lastStage !== "delete") {
               addLogEntry(`Extracción completada: ${job.copied} archivos`, "extract");
               addLogEntry(`Iniciando eliminación del celular...`, "delete");
+              // Asegurar que tenemos cache de archivos
+              if (cachedFiles.length === 0) {
+                cachedFiles = await fetchFilesBatch(0, job.totalFiles || job.total);
+              }
             }
 
             extractMeta.textContent = `Extraccion completada: ${job.copied} archivos.`;
@@ -702,11 +751,11 @@ extractForm.addEventListener("submit", (event) => {
             // Resaltar archivo actual en rojo (eliminando)
             highlightPath(job.currentPath, "deleting");
 
-            // Marcar archivos ya eliminados
+            // Marcar archivos ya eliminados usando cache local
             if (job.deleted > lastDeleted) {
               for (let i = lastDeleted; i < job.deleted; i++) {
-                if (job.files && job.files[i]) {
-                  markPathStatus(job.files[i].path, "deleted");
+                if (cachedFiles[i]) {
+                  markPathStatus(cachedFiles[i].path, "deleted");
                 }
               }
               if (job.deleted % 5 === 0 || job.deleted === 1) {
@@ -721,6 +770,7 @@ extractForm.addEventListener("submit", (event) => {
           if (job.status === "done") {
             clearInterval(statusTimer);
             statusTimer = null;
+            cachedFiles = []; // Liberar memoria
 
             let resultMsg = `Completado: ${job.copied} archivos ${job.type.toUpperCase()} extraidos`;
             if (job.deleteAfter) {
@@ -745,6 +795,7 @@ extractForm.addEventListener("submit", (event) => {
           if (job.status === "error") {
             clearInterval(statusTimer);
             statusTimer = null;
+            cachedFiles = []; // Liberar memoria
             addLogEntry(`ERROR: ${job.error}`, "delete");
             extractResult.textContent = `Error: ${job.error}`;
             extractResult.classList.add("warn");
@@ -752,6 +803,7 @@ extractForm.addEventListener("submit", (event) => {
         } catch (err) {
           clearInterval(statusTimer);
           statusTimer = null;
+          cachedFiles = [];
           extractResult.textContent = `Error consultando estado: ${err.message}`;
           extractResult.classList.add("warn");
         }
