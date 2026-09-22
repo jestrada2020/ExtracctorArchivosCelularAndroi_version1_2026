@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Extractora Android MTP - Extrae archivos de tu celular a Linux</title>
-  <meta name="description" content="Herramienta para extraer archivos de Android a Linux via USB usando MTP. Soporta documentos, imagenes, videos, audio y extensiones personalizadas." />
+  <title>Extractora Android MTP - Extrae archivos y libera memoria en Linux</title>
+  <meta name="description" content="Herramienta para extraer archivos de Android a Linux via USB usando MTP. Soporta documentos, imágenes, videos, audios, diagnóstico de memoria y comparación de espacio liberado." />
   <meta name="theme-color" content="#ea5a2a" />
   <meta property="og:title" content="Extractora Android MTP" />
-  <meta property="og:description" content="Extrae cualquier tipo de archivo de tu celular Android a Linux via USB." />
+  <meta property="og:description" content="Extrae cualquier tipo de archivo de tu celular Android a Linux via USB y audita la memoria liberada." />
   <meta property="og:type" content="website" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📱</text></svg>" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=1790017356" />
 </head>
 <body>
   <div class="page">
@@ -19,60 +19,111 @@
         <div class="brand-mark">MTP</div>
         <div>
           <div class="brand-title">Extractora Android</div>
-          <div class="brand-subtitle">Extrae cualquier tipo de archivo</div>
+          <div class="brand-subtitle">Extracción y Liberación de Memoria</div>
         </div>
       </div>
       <nav class="menu" id="menu"></nav>
       <div class="sidebar-footer">
         <div class="status">
           <span class="dot"></span>
-          <span>Modo: Guia interactiva</span>
+          <span>Modo: Interactivo local</span>
         </div>
-        <button class="ghost" id="toggle-theme">Cambiar atmosfera</button>
+        <button class="ghost" id="toggle-theme">🎨 Tema: Claro</button>
+        <button class="ghost small" id="toggle-notifications">🔔 Alertas: Activadas</button>
+        <button class="primary btn-finish small" id="btn-finish-sidebar" title="Desmonta el celular de forma segura y cierra la aplicación">⏏️ Finalizar y desconectar</button>
       </div>
     </aside>
 
     <main class="content">
       <section class="hero" id="inicio">
         <div>
-          <p class="pill">MTP / ADB / jmtpfs</p>
+          <p class="pill">MTP / ADB / GVFS FUSE / AUDITORÍA</p>
           <h1>Extrae archivos de Android a tu PC</h1>
-          <p class="lead">Conecta tu celular por USB, detectalo y extrae cualquier tipo de archivo: documentos, imagenes, videos, audios o cualquier extension personalizada.</p>
+          <p class="lead">Conecta tu celular por USB, detecta su contenido, audita la capacidad de sus memorias y carpetas, y verifica con exactitud el espacio liberado tras la extracción.</p>
           <div class="hero-actions">
             <button class="primary" id="detect-device">Detectar dispositivo</button>
             <button class="secondary" id="remount-btn" disabled>Reconectar</button>
+            <button class="secondary" id="btn-inspect-storage" disabled title="Analizar tipos de memoria y capacidad de carpetas">📊 Analizar Memoria</button>
+            <button class="secondary" id="open-dest-btn" title="Abrir carpeta de destino en el explorador">📂 Abrir destino</button>
             <button class="secondary" id="copy-all">Copiar comandos</button>
+            <button class="primary btn-finish" id="btn-finish-top" title="Desmonta el celular de forma segura y cierra la aplicación">⏏️ Finalizar y desconectar</button>
           </div>
           <div class="detect-status" id="detect-status">
-            Esperando conexion...
+            Listo para detectar dispositivo.
           </div>
         </div>
         <div class="hero-card">
-          <h2>Checklist rapido</h2>
+          <h2>Checklist rápido</h2>
           <ul id="quick-checklist"></ul>
+        </div>
+      </section>
+
+      <!-- Panel de Diagnóstico de Almacenamiento y Tipos de Memoria -->
+      <section class="panel" id="storage-panel" style="display: none;">
+        <div class="panel-header">
+          <div>
+            <p class="section-kicker">diagnóstico del teléfono</p>
+            <h2>Tipos de Memoria y Capacidad de Carpetas</h2>
+            <p class="section-desc">Monitorea el espacio total, ocupado y libre en el almacenamiento interno, tarjeta SD y carpetas clave de Android.</p>
+          </div>
+          <div class="header-actions">
+            <button class="secondary" id="btn-refresh-storage">🔄 Actualizar Diagnóstico</button>
+          </div>
+        </div>
+
+        <!-- Tarjetas de memorias (Interna / Externa SD) -->
+        <div class="storage-cards-grid" id="storage-cards-grid"></div>
+
+        <!-- Tabla de carpetas principales de Android -->
+        <div class="folder-stats-card">
+          <div class="folder-stats-header">
+            <h3>📂 Capacidad por Carpetas Principales de Android</h3>
+            <span class="folder-stats-meta" id="folder-stats-meta">Muestreo de carpetas clave</span>
+          </div>
+          <div class="folder-table-wrapper">
+            <table class="preview-table" id="folder-stats-table">
+              <thead>
+                <tr>
+                  <th>Carpeta Clave</th>
+                  <th>Memoria</th>
+                  <th>Archivos Muestreados</th>
+                  <th style="text-align: right;">Espacio Ocupado</th>
+                </tr>
+              </thead>
+              <tbody id="folder-stats-table-body"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
       <section class="panel" id="exploracion-panel">
         <div class="panel-header">
           <div>
-            <p class="section-kicker">extraccion</p>
+            <p class="section-kicker">configuración y extracción</p>
             <h2>Explorar y extraer archivos</h2>
-            <p class="section-desc">Cuando el dispositivo se detecta, explora su estructura y extrae los archivos que necesites.</p>
+            <p class="section-desc">Selecciona tus preferencias, previsualiza los archivos y descárgalos con control de duplicados.</p>
           </div>
-          <button class="primary" id="start-exploration" disabled>Ver arbol de carpetas</button>
+          <div class="header-actions">
+            <button class="ghost small" id="btn-clear-monitor">🧹 Limpiar monitor</button>
+            <button class="ghost small" id="btn-release-memory" title="Vacía los cachés del servidor y del navegador">♻️ Liberar memoria</button>
+          </div>
         </div>
         <div class="panel-body">
-          <div class="tree" id="device-tree">
-            <div class="tree-placeholder">
-              Árbol del celular: esperando detección.<br><br>
-              <small style="color: var(--muted);">
-                Durante la operación verás:<br>
-                🔵 Azul = Buscando<br>
-                🟢 Verde = Extrayendo<br>
-                🔴 Rojo = Eliminando
-              </small>
+          <div class="monitor" id="activity-monitor">
+            <div class="monitor-head">
+              <span class="monitor-dot" id="monitor-dot"></span>
+              <div class="monitor-labels">
+                <span class="monitor-state" id="monitor-state">En espera</span>
+                <span class="monitor-path" id="monitor-path">Sin actividad. Conecta el celular y detecta el dispositivo.</span>
+              </div>
+              <span class="monitor-mem" id="monitor-mem"></span>
             </div>
+            <div class="monitor-log" id="monitor-log" aria-live="polite"></div>
+            <p class="monitor-hint">
+              Monitor ligero: se muestra sólo la ruta en curso y las últimas líneas de actividad.
+              No se construye ningún árbol de carpetas en memoria, para que la búsqueda y la copia
+              dispongan de todo el canal USB y de la RAM del equipo.
+            </p>
           </div>
           <form class="extract-form" id="extract-form">
             <div class="field">
@@ -80,60 +131,106 @@
               <select id="file-type">
                 <option value="pdf">PDF (.pdf)</option>
                 <option value="documents">Documentos (pdf, doc, xls, ppt, txt...)</option>
-                <option value="images">Imagenes (jpg, png, gif, webp...)</option>
-                <option value="videos">Videos (mp4, mkv, avi, mov...)</option>
-                <option value="audio">Audio (mp3, wav, m4a, flac...)</option>
+                <option value="images">Imágenes (jpg, png, gif, webp, heic...)</option>
+                <option value="videos">Videos (mp4, mkv, avi, mov, webm...)</option>
+                <option value="audio">Audio (mp3, wav, m4a, flac, opus...)</option>
                 <option value="all">Todos los tipos comunes</option>
-                <option value="custom">Extension personalizada...</option>
+                <option value="custom">Extensión personalizada...</option>
               </select>
             </div>
             <div class="field" id="custom-ext-field" style="display: none;">
-              <label for="custom-ext">Extension (sin punto)</label>
+              <label for="custom-ext">Extensión (sin punto)</label>
               <input id="custom-ext" type="text" placeholder="Ej: apk, zip, rar, epub" />
-              <span class="hint">Ingresa la extension sin el punto inicial.</span>
+              <span class="hint">Ingresa la extensión sin el punto inicial.</span>
             </div>
             <div class="field">
-              <label for="search-mode">Modo de busqueda</label>
+              <label for="search-mode">Modo de búsqueda</label>
               <select id="search-mode">
-                <option value="known">Ubicaciones conocidas (rapido)</option>
-                <option value="full">Todo el almacenamiento (completo)</option>
+                <option value="known">Ubicaciones conocidas (rápido - Download, DCIM, WhatsApp...)</option>
+                <option value="full">Todo el almacenamiento (completo y exhaustivo, más lento)</option>
               </select>
-              <span class="hint">Ubicaciones conocidas: Download, Documents, WhatsApp, Telegram, DCIM, etc.</span>
+              <span class="hint">Rápido: Download, Documents, WhatsApp, Telegram, DCIM, Pictures y la superficie de la raíz. Si buscas archivos guardados dentro de <code>Android/data</code> por otras apps, usa el modo completo.</span>
             </div>
             <div class="field">
-              <label for="destination">Carpeta destino (opcional)</label>
+              <label for="structure-mode">Organización y Duplicados</label>
+              <select id="structure-mode">
+                <option value="preserve" selected>Conservar carpetas de origen (Recomendado - evita sobrescrituras)</option>
+                <option value="flat_rename">Carpeta única: Renombrar duplicados (ej: archivo (1).ext)</option>
+                <option value="flat_skip">Carpeta única: Omitir si ya existe en el PC</option>
+                <option value="flat_overwrite">Carpeta única: Sobrescribir siempre</option>
+              </select>
+              <span class="hint">La opción recomendada recrea las subcarpetas del móvil en el PC.</span>
+            </div>
+            <div class="fields-row">
+              <div class="field">
+                <label for="date-filter">Filtro por fecha</label>
+                <select id="date-filter">
+                  <option value="all" selected>Cualquier fecha</option>
+                  <option value="24h">Últimas 24 horas</option>
+                  <option value="7d">Últimos 7 días</option>
+                  <option value="30d">Últimos 30 días</option>
+                  <option value="year">Este último año</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="size-filter">Filtro por tamaño</label>
+                <select id="size-filter">
+                  <option value="0" selected>Todos los tamaños</option>
+                  <option value="1024">Mayor a 1 MB</option>
+                  <option value="10240">Mayor a 10 MB</option>
+                  <option value="51200">Mayor a 50 MB</option>
+                  <option value="102400">Mayor a 100 MB</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="destination">Carpeta destino en tu PC (opcional)</label>
               <input id="destination" type="text" placeholder="Ej: /home/usuario/Extraidos" />
-              <span class="hint">Si lo dejas vacio, se crea una carpeta automatica en ~/Extraidos_Android/</span>
+              <span class="hint">Si lo dejas vacío, se guardará en ~/Extraidos_Android/&lt;TIPO&gt;</span>
             </div>
             <div class="field checkbox-field">
               <label class="checkbox-label">
                 <input type="checkbox" id="delete-after" />
-                <span>Eliminar archivos del celular despues de extraer</span>
+                <span>Eliminar archivos del celular después de extraer con éxito</span>
               </label>
-              <span class="hint warn-hint">ADVERTENCIA: Esta accion es permanente y no se puede deshacer.</span>
+              <span class="hint warn-hint">ADVERTENCIA: Se verificará la copia en el PC antes de eliminar. Acción irreversible.</span>
             </div>
-            <button class="primary" type="submit">Iniciar extraccion</button>
+
+            <div class="form-actions">
+              <button class="primary" id="btn-scan" type="button">🔍 Escanear y Previsualizar</button>
+              <button class="secondary" id="btn-extract-all" type="submit">⚡ Extracción Directa</button>
+              <button class="danger" id="btn-cancel" type="button" style="display: none;">⛔ Cancelar Proceso</button>
+            </div>
 
             <div class="progress-block">
-              <div class="progress-label">Busqueda</div>
+              <div class="progress-header">
+                <span class="progress-label">Búsqueda</span>
+                <span class="progress-badge" id="search-badge">En espera</span>
+              </div>
               <div class="progress" id="search-progress">
                 <div class="progress-bar" id="search-bar"></div>
               </div>
-              <div class="progress-meta" id="search-meta">Sin busqueda activa.</div>
+              <div class="progress-meta" id="search-meta">Sin búsqueda activa.</div>
             </div>
             <div class="progress-block">
-              <div class="progress-label">Extraccion</div>
+              <div class="progress-header">
+                <span class="progress-label">Extracción</span>
+                <span class="progress-badge" id="extract-badge">En espera</span>
+              </div>
               <div class="progress" id="extract-progress">
                 <div class="progress-bar" id="extract-bar"></div>
               </div>
-              <div class="progress-meta" id="extract-meta">Sin extraccion activa.</div>
+              <div class="progress-meta" id="extract-meta">Sin extracción activa.</div>
             </div>
             <div class="progress-block">
-              <div class="progress-label">Eliminacion</div>
+              <div class="progress-header">
+                <span class="progress-label">Eliminación</span>
+                <span class="progress-badge" id="delete-badge">Inactiva</span>
+              </div>
               <div class="progress" id="delete-progress">
                 <div class="progress-bar delete-bar" id="delete-bar"></div>
               </div>
-              <div class="progress-meta" id="delete-meta">No se eliminaran archivos.</div>
+              <div class="progress-meta" id="delete-meta">No se eliminarán archivos.</div>
             </div>
 
             <div class="location-stats" id="location-stats"></div>
@@ -142,8 +239,108 @@
         </div>
       </section>
 
+      <!-- Panel de Vista Previa y Selección de Archivos -->
+      <section class="panel" id="preview-panel" style="display: none;">
+        <div class="panel-header">
+          <div>
+            <p class="section-kicker">selección interactiva</p>
+            <h2 id="preview-title">Archivos encontrados</h2>
+            <p class="section-desc" id="preview-desc">Marca o desmarca los archivos que deseas descargar antes de iniciar la extracción.</p>
+          </div>
+          <div class="preview-actions">
+            <button class="primary" id="btn-extract-selected" disabled>📥 Extraer seleccionados (<span id="selected-counter">0</span>)</button>
+          </div>
+        </div>
+        <div class="preview-toolbar">
+          <div class="preview-toolbar-left">
+            <label class="checkbox-label select-all-label">
+              <input type="checkbox" id="select-all-files" checked />
+              <span>Seleccionar todos</span>
+            </label>
+            <span class="pill-badge" id="preview-summary-badge">0 archivos</span>
+          </div>
+          <div class="preview-toolbar-right">
+            <input type="search" id="preview-search" placeholder="🔍 Filtrar por nombre o carpeta..." />
+          </div>
+        </div>
+        <div class="preview-table-wrapper">
+          <table class="preview-table" id="preview-table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">✓</th>
+                <th>Nombre del Archivo</th>
+                <th>Carpeta de Origen</th>
+                <th style="width: 120px; text-align: right;">Tamaño</th>
+              </tr>
+            </thead>
+            <tbody id="preview-table-body">
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Panel de Información Clave y Comparativa de Liberación de Memoria -->
+      <section class="panel" id="comparison-panel" style="display: none;">
+        <div class="panel-header">
+          <div>
+            <p class="section-kicker">auditoría de resultados</p>
+            <h2>Comparativa de Liberación de Memoria (Antes vs Después)</h2>
+            <p class="section-desc">Verificación del espacio recuperado en tu celular Android tras los procesos de extracción y eliminación.</p>
+          </div>
+          <div class="header-actions">
+            <button class="secondary" id="btn-recheck-comparison">🔄 Re-verificar estado actual</button>
+            <button class="primary btn-finish" id="btn-finish" title="Desmonta el celular de forma segura y cierra la aplicación">✅ Finalizar</button>
+          </div>
+        </div>
+
+        <div class="comparison-summary-banner" id="comparison-summary-banner">
+          <div class="banner-stat">
+            <span class="banner-label">Espacio Total Liberado</span>
+            <span class="banner-value" id="total-freed-value">0 MB</span>
+          </div>
+          <div class="banner-stat">
+            <span class="banner-label">Archivos Extraídos</span>
+            <span class="banner-value" id="total-copied-stat">0</span>
+          </div>
+          <div class="banner-stat">
+            <span class="banner-label">Archivos Eliminados</span>
+            <span class="banner-value" id="total-deleted-stat">0</span>
+          </div>
+          <div class="banner-stat">
+            <span class="banner-label">Resultado de Auditoría</span>
+            <span class="banner-value" id="total-freed-status">✓ Verificado</span>
+          </div>
+        </div>
+
+        <div class="preview-table-wrapper">
+          <table class="preview-table comparison-table" id="comparison-table">
+            <thead>
+              <tr>
+                <th>Tipo de Memoria / Carpeta</th>
+                <th style="text-align: right;">Estado Inicial (Antes)</th>
+                <th style="text-align: right;">Estado Actual (Después)</th>
+                <th style="text-align: right;">Espacio Liberado / Cambio</th>
+                <th style="text-align: center;">Resultado</th>
+              </tr>
+            </thead>
+            <tbody id="comparison-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="grid" id="sections"></section>
     </main>
+  </div>
+
+  <!-- Pantalla de cierre tras pulsar "Finalizar" -->
+  <div class="finish-overlay" id="finish-overlay" hidden>
+    <div class="finish-card">
+      <div class="finish-icon">✅</div>
+      <h2>Proceso finalizado</h2>
+      <p id="finish-message">El celular se desmontó de forma segura y el servidor se detuvo.</p>
+      <p class="finish-hint" id="finish-hint">Ya puedes desconectar el cable USB y cerrar esta pestaña.</p>
+      <button class="primary" id="btn-restart">🔄 Volver a empezar</button>
+    </div>
   </div>
 
   <template id="section-template">
@@ -177,9 +374,9 @@
     <style>.page { display: block !important; } .sidebar { display: none; }</style>
     <div style="max-width: 700px; margin: 40px auto; padding: 20px; font-family: sans-serif;">
       <h1>Extractora Android MTP</h1>
-      <p>Esta aplicacion requiere JavaScript para funcionar. Activalo en tu navegador.</p>
+      <p>Esta aplicación requiere JavaScript para funcionar. Actívalo en tu navegador.</p>
     </div>
   </noscript>
-  <script src="app.js"></script>
+  <script src="app.js?v=1790017356"></script>
 </body>
 </html>

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Extractor Android MTP
+GenericName=Extractor de Archivos y Liberador de Memoria
+Comment=Extrae archivos de tu celular Android y verifica la memoria liberada
+Exec="/home/john/Descargas/ExtracctorArchivosCelularAndroid_version2_2026/start.sh"
+Icon=/home/john/Descargas/ExtracctorArchivosCelularAndroid_version2_2026/assets/icon.svg
+Terminal=false
+Categories=Utility;FileManager;FileTransfer;
+StartupNotify=true
